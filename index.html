@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="uk" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Генератор рефератів</title>
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+
+
+  <link rel="stylesheet" href="style.css" />
+  <script src="i18n.js" defer></script>
+  <script src="script.js?v=17" defer></script>
+</head>
+<body>
+  
+  <div class="blob blob-1"></div>
+  <div class="blob blob-2"></div>
+  <div class="blob blob-3"></div>
+
+  <header class="glass-header">
+    <div class="header-content">
+      <h1 id="app-title">📝 Генератор рефератів</h1>
+      <div class="header-actions">
+        <button id="settings-toggle" class="btn-icon" title="Налаштування">⚙️</button>
+        <button id="lang-toggle" class="btn-secondary">🇺🇦 Українська</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Settings Modal -->
+  <div id="settings-modal" class="modal hidden">
+    <div class="modal-backdrop"></div>
+    <div class="modal-content glass-card">
+      <h2>⚙️ <span data-i18n="settings">Налаштування</span></h2>
+      <p class="helper-text">Підтримується Gemini API (безкоштовно) і ChatGPT API. Рекомендуємо Gemini — це безкоштовно:</p>
+      <a href="https://aistudio.google.com/apikey" target="_blank" class="btn-link">🔗 Gemini безкоштовний ключ →</a>
+      <div class="form-group mt-2">
+        <label>API-ключі (Gemini або ChatGPT, кілька через кому):</label>
+        <input type="password" id="api-key-input" class="premium-input" placeholder="AIza... або sk-... (через кому)" />
+      </div>
+      <div class="form-group mt-2">
+        <label>Гучність сповіщень (Notification Volume):</label>
+        <div style="display: flex; gap: 10px; align-items: center;">
+          <input type="range" id="volume-slider" min="0" max="1" step="0.1" value="0.5" style="flex-grow: 1;" />
+          <button id="test-sound-btn" class="btn-icon" title="Test Sound" style="padding: 5px;">🔊</button>
+        </div>
+      </div>
+      <div class="button-group mt-2">
+        <button id="save-api-key" class="btn-primary" data-i18n="save">Зберегти</button>
+        <button id="close-settings" class="btn-secondary" data-i18n="close">Закрити</button>
+      </div>
+      <div id="api-status" class="status-badge mt-2"></div>
+      
+
+    </div>
+  </div>
+
+
+
+  <main class="container">
+    <div class="grid-layout">
+      <!-- Left Column -->
+      <div class="column">
+
+        <!-- Profiles -->
+        <section class="glass-card">
+          <h2>👤 <span data-i18n="profiles">Профілі викладачів</span></h2>
+          <div class="form-group">
+            <select id="profile-select" class="premium-input"></select>
+          </div>
+          <div class="button-group">
+            <button id="add-profile" class="btn-primary" data-i18n="addProfile">+ Додати</button>
+            <button id="rename-profile" class="btn-secondary" data-i18n="renameProfile">✏️ Змінити</button>
+            <button id="delete-profile" class="btn-danger" data-i18n="deleteProfile">🗑 Видалити</button>
+          </div>
+          <div class="button-group" style="margin-top: 8px;">
+            <button id="export-data" class="btn-secondary" title="Зберегти всі профілі та налаштування у файл">💾 Експорт</button>
+            <button id="import-data" class="btn-secondary" title="Відновити профілі та налаштування з файлу">📥 Імпорт</button>
+            <input type="file" id="import-file-input" accept=".json" class="file-input" style="display:none;" />
+          </div>
+        </section>
+
+        <!-- File Upload -->
+        <section class="glass-card">
+          <h2>📄 <span data-i18n="requirements">Файли вимог</span></h2>
+          <div class="file-upload-wrapper">
+            <input type="file" id="file-input" multiple accept=".txt,.doc,.docx,.pdf" class="file-input" />
+            <div class="file-upload-box" id="file-upload-box">
+              <span class="upload-icon">📂</span>
+              <p data-i18n="selectFiles">Натисніть, щоб обрати файли (.txt, .doc, .docx, .pdf)</p>
+            </div>
+          </div>
+          <p class="helper-text" data-i18n="maxFiles">Максимум 5 файлів.</p>
+          
+          <!-- Uploaded file list -->
+          <div id="file-list" class="file-list mt-2"></div>
+        </section>
+
+        <!-- Example Referat -->
+        <section class="glass-card">
+          <h2>📎 <span data-i18n="exampleReferat">Приклад реферату</span></h2>
+          <div class="file-upload-wrapper">
+            <input type="file" id="example-input" multiple accept=".txt,.doc,.docx,.pdf" class="file-input" />
+            <div class="file-upload-box" id="example-upload-box">
+              <span class="upload-icon">📋</span>
+              <p data-i18n="selectExample">Прикріпіть зразкові реферати (до 3 шт.)</p>
+            </div>
+          </div>
+          <p class="helper-text" data-i18n="exampleHint">ІІ буде орієнтуватися на структуру та оформлення цих зразків</p>
+          <div id="example-file-display" class="file-list mt-2"></div>
+        </section>
+
+        <!-- Topic -->
+        <section class="glass-card">
+          <h2>🎯 <span data-i18n="topic">Тема реферату</span></h2>
+          <textarea id="topic-input" class="premium-input" placeholder="Введіть тему реферату..." rows="3"></textarea>
+          
+          <div class="form-group mt-2 mb-2">
+            <label for="discipline-input" class="toggle-label" style="font-weight: bold; margin-bottom: 5px; display: block;">Назва дисципліни:</label>
+            <input type="text" id="discipline-input" class="premium-input" placeholder="Наприклад: Захист України" style="max-width: 100%;">
+          </div>
+          
+          <div class="form-group mt-2 mb-2">
+            <label for="page-count" class="toggle-label" style="font-weight: bold; margin-bottom: 5px; display: block;">Обсяг реферату (сторінок):</label>
+            <input type="number" id="page-count" class="premium-input" value="15" min="5" max="50" style="max-width: 100%;">
+          </div>
+          
+          <div class="toggle-container">
+            <label class="switch">
+              <input type="checkbox" id="citations-toggle">
+              <span class="slider round"></span>
+            </label>
+            <label for="citations-toggle" class="toggle-label">Вставляти посилання в текст [1, с. 45]</label>
+          </div>
+
+          <div class="toggle-container" style="margin-top: 10px;">
+            <label class="switch">
+              <input type="checkbox" id="lite-model-toggle">
+              <span class="slider round"></span>
+            </label>
+            <label for="lite-model-toggle" class="toggle-label">Використати 3.5-flash-lite (якщо 3.6 перевантажена)</label>
+          </div>
+
+          <div class="toggle-container" style="margin-top: 10px;">
+            <label class="switch">
+              <input type="checkbox" id="hyphenation-toggle" checked>
+              <span class="slider round"></span>
+            </label>
+            <label for="hyphenation-toggle" class="toggle-label">Автоперенесення слів (прибирає великі пробіли)</label>
+          </div>
+
+
+
+          <div class="form-group" style="margin-top: 10px;">
+            <label for="page-number-position" class="toggle-label" style="font-weight: bold; margin-bottom: 5px; display: block;">Розташування нумерації сторінок:</label>
+            <select id="page-number-position" class="premium-input" style="max-width: 100%; cursor: pointer;">
+              <option value="bottom-right">Знизу справа</option>
+              <option value="bottom-center">Знизу по центру</option>
+              <option value="bottom-left">Знизу зліва</option>
+              <option value="top-right">Зверху справа</option>
+              <option value="top-center">Зверху по центру</option>
+              <option value="top-left">Зверху зліва</option>
+            </select>
+          </div>
+
+          <div class="form-group" style="margin-top: 10px;">
+            <label class="toggle-label" style="font-weight: bold; margin-bottom: 5px; display: block;">Поля документа (мм):</label>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+              <div>
+                <label for="margin-top" style="font-size: 12px; color: var(--text-secondary);">Зверху:</label>
+                <input type="number" id="margin-top" class="premium-input" value="20" min="0" max="100" style="width: 100%;">
+              </div>
+              <div>
+                <label for="margin-bottom" style="font-size: 12px; color: var(--text-secondary);">Знизу:</label>
+                <input type="number" id="margin-bottom" class="premium-input" value="20" min="0" max="100" style="width: 100%;">
+              </div>
+              <div>
+                <label for="margin-left" style="font-size: 12px; color: var(--text-secondary);">Зліва:</label>
+                <input type="number" id="margin-left" class="premium-input" value="20" min="0" max="100" style="width: 100%;">
+              </div>
+              <div>
+                <label for="margin-right" style="font-size: 12px; color: var(--text-secondary);">Справа:</label>
+                <input type="number" id="margin-right" class="premium-input" value="10" min="0" max="100" style="width: 100%;">
+              </div>
+            </div>
+          </div>
+
+          <button id="generate-btn" class="btn-primary full-width mt-2" data-i18n="generate">🚀 Згенерувати реферат</button>
+          <div id="loading-indicator" class="loading hidden">
+            <div class="spinner"></div>
+            <span data-i18n="generating">Генерація реферату... Зачекайте 30-60 секунд</span>
+          </div>
+        </section>
+      </div>
+
+      <!-- Right Column -->
+      <div class="column">
+        <section class="glass-card output-card">
+          <h2>📋 <span data-i18n="output">Згенерований реферат</span></h2>
+          <div class="output-area-wrapper">
+            <div id="output-area" class="output-area" contenteditable="true">
+              <p class="placeholder-text" data-i18n="outputPlaceholder">Тут з'явиться згенерований реферат...</p>
+            </div>
+          </div>
+          <div class="button-group mt-2">
+            <button id="export-docx" class="btn-primary" data-i18n="exportDocx">💾 Завантажити .doc</button>
+            <button id="print-pdf" class="btn-secondary" data-i18n="printPdf">🖨 Друк / PDF</button>
+          </div>
+        </section>
+      </div>
+    </div>
+  </main>
+
+  <footer class="glass-footer">
+    <p>&copy; 2026 Генератор рефератів • Працює на ChatGPT AI</p>
+  </footer>
+
+  <div id="toast-container" class="toast-container"></div>
+</body>
+</html>
