@@ -1616,49 +1616,37 @@ function buildEssayHTML(data, topic) {
   // ═══ 1. TITLE PAGE (SECTION 1) ═══
   const titlePage = `
 <div class="Section1">
-  <table width="100%" border="0" cellpadding="0" cellspacing="0" style="width:100%;">
+  <div class="title-top">
+    НАЦІОНАЛЬНИЙ УНІВЕРСИТЕТ<br>
+    «ОДЕСЬКА ЮРИДИЧНА АКАДЕМІЯ»<br>
+    КРИВОРІЗЬКИЙ ЮРИДИЧНИЙ ФАХОВИЙ КОЛЕДЖ
+  </div>
+  ${titleBlankLines(5)}
+  <div class="title-middle">
+    <div class="essay-word">РЕФЕРАТ</div>
+    <div class="discipline-line">з навчальної дисципліни ${escapeHtml(discipline)}</div>
+    <div class="topic-line">на тему: «${escapeHtml(topic)}»</div>
+  </div>
+  ${titleBlankLines(6)}
+  <table width="100%" border="0" cellpadding="0" cellspacing="0">
     <tr>
-      <td valign="top" style="text-align:center; font-family:'Times New Roman',serif; font-size:14pt; font-weight:bold; line-height:150%;">
-        НАЦІОНАЛЬНИЙ УНІВЕРСИТЕТ<br>
-        «ОДЕСЬКА ЮРИДИЧНА АКАДЕМІЯ»<br>
-        КРИВОРІЗЬКИЙ ЮРИДИЧНИЙ ФАХОВИЙ КОЛЕДЖ
-      </td>
-    </tr>
-    <tr><td style="height:5cm;">&nbsp;</td></tr>
-    <tr>
-      <td valign="middle" style="text-align:center; font-family:'Times New Roman',serif; font-size:14pt; line-height:150%;">
-        <b>РЕФЕРАТ</b><br>
-        з навчальної дисципліни ${escapeHtml(discipline)}<br>
-        на тему: «${escapeHtml(topic)}»
-      </td>
-    </tr>
-    <tr><td style="height:4cm;">&nbsp;</td></tr>
-    <tr>
-      <td valign="middle" style="font-family:'Times New Roman',serif; font-size:14pt; line-height:150%;">
-        <table width="100%" border="0" cellpadding="0" cellspacing="0">
-          <tr>
-            <td width="50%">&nbsp;</td>
-            <td width="50%" style="text-align:left; font-size:14pt; line-height:150%; font-family:'Times New Roman',serif;">
-              Виконала (-в):<br>
-              Студент (-тка) 1 курсу групи 25 КД<br>
-              Прізвище, імʼя, по-батькові<br>
-              <br>
-              Викладач навчальної дисципліни:<br>
-              Чернецький Андрій Олегович
-            </td>
-          </tr>
-        </table>
-      </td>
-    </tr>
-    <tr><td style="height:6cm;">&nbsp;</td></tr>
-    <tr>
-      <td valign="bottom" style="text-align:center; font-family:'Times New Roman',serif; font-size:14pt; line-height:150%;">
-        Кривий Ріг<br>
-        2026
+      <td width="50%"></td>
+      <td width="50%" style="text-align: left; font-size: 14pt; line-height: 150%; font-family: 'Times New Roman', Times, serif;">
+        Виконала (-в):<br>
+        Студент (-тка) 1 курсу групи 25 КД<br>
+        Прізвище, імʼя, по-батькові<br>
+        <br>
+        Викладач навчальної дисципліни:<br>
+        Чернецький Андрій Олегович
       </td>
     </tr>
   </table>
-  <p style="margin:0; padding:0; font-size:0pt; line-height:0pt;"><br clear="all" style="page-break-before:always; mso-break-type:section-break" /></p>
+  ${titleBlankLines(2)}
+  <div class="title-bottom">
+    Кривий Ріг<br>
+    2026
+    <p style="margin:0; padding:0; font-size:0pt; line-height:0pt;"><br clear="all" style="page-break-before:always; mso-break-type:section-break" /></p>
+  </div>
 </div>
 <div class="WordSection2">`;
 
@@ -2054,30 +2042,10 @@ function exportDocx() {
   const elemType = pageNumOnTop ? 'header' : 'footer';
   const elemId = pageNumOnTop ? 'h1' : 'f1';
   const msoCls = pageNumOnTop ? 'MsoHeader' : 'MsoFooter';
-
-  // Page number header/footer definition.
-  // Wrapped in a hidden container so the fallback text never leaks as body text.
-  // Word still processes mso-element definitions inside hidden containers.
-  const pageNumDef = [
-    '<div style="height:0;overflow:hidden">',
-    '<div style="mso-element:' + elemType + '" id="' + elemId + '">',
-    '<p class="' + msoCls + '" align="' + pageNumAlign + '" style="margin:0;text-align:' + pageNumAlign + ';font-family:Times New Roman,serif;font-size:14pt">',
-    '<!--[if supportFields]>',
-    '<span style="mso-element:field-begin"></span>',
-    ' PAGE ',
-    '<span style="mso-element:field-separator"></span>',
-    '<![endif]-->',
-    '<span class="MsoPageNumber"></span>',
-    '<!--[if supportFields]>',
-    '<span style="mso-element:field-end"></span>',
-    '<![endif]-->',
-    '</p></div></div>'
-  ].join('');
+  // Direct mso-element definition as a direct child of <body>.
+  // Word strips these from body rendering and uses them as header/footer.
+  const pageNumDef = `<div style='mso-element:${elemType}' id='${elemId}'><p class='${msoCls}' align='${pageNumAlign}' style='margin:0;text-align:${pageNumAlign};font-family:Times New Roman,serif;font-size:14pt'><!--[if supportFields]><span style='mso-element:field-begin'></span> PAGE <span style='mso-element:field-separator'></span><![endif]--><span class='MsoPageNumber'></span><!--[if supportFields]><span style='mso-element:field-end'></span><![endif]--></p></div>`;
   const footer = "\n</body>\n</html>";
-
-  // Place pageNumDef before all sections.
-  // Section1 @page has NO mso-header/footer ref => no number on title.
-  // Section2 @page references h1/f1 => numbers on content pages.
   const sourceHTML = header + pageNumDef + '\n' + processed + footer;
 
   // Create blob with proper MIME type for Word
