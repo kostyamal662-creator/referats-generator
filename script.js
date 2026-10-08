@@ -1801,6 +1801,7 @@ function exportDocx() {
         margin: ${ptTop}pt ${ptRight}pt ${ptBottom}pt ${ptLeft}pt;
         mso-header-margin: 0pt;
         mso-footer-margin: 0pt;
+        mso-title-page: yes;
       }
       div.Section1 { page: WordSection1; }
       
@@ -2043,10 +2044,13 @@ function exportDocx() {
   const pageNumDef = `<div style='mso-element:${elemType}' id='${elemId}'><p class='${msoCls}' align='${pageNumAlign}' style='margin:0; text-align:${pageNumAlign}; font-family:"Times New Roman",serif; font-size:14pt;'><!--[if supportFields]><span class='MsoPageNumber'><span style='mso-element:field-begin'></span> PAGE <span style='mso-element:field-separator'></span></span><![endif]--><span class='MsoPageNumber'></span><!--[if supportFields]><span class='MsoPageNumber'><span style='mso-element:field-end'></span></span><![endif]--></p></div>`;
   const footer = "\n</body>\n</html>";
 
-  // Place pageNumDef right after <body>, BEFORE content sections.
-  // Word parses mso-element definitions regardless of position, but placing
-  // them before content prevents the fallback value from rendering as body text.
-  const sourceHTML = header + pageNumDef + '\n' + processed + footer;
+  // Inject pageNumDef INSIDE WordSection2 (right after <div class="WordSection2">)
+  // so Word applies the header/footer only to Section2 pages (not the title page).
+  processed = processed.replace(
+    '<div class="WordSection2">',
+    '<div class="WordSection2">' + pageNumDef
+  );
+  const sourceHTML = header + processed + footer;
 
   // Create blob with proper MIME type for Word
   const blob = new Blob([sourceHTML], {
