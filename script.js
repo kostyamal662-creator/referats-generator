@@ -1650,7 +1650,7 @@ function buildEssayHTML(data, topic) {
         </table>
       </td>
     </tr>
-    <tr><td style="height:2cm;">&nbsp;</td></tr>
+    <tr><td style="height:6cm;">&nbsp;</td></tr>
     <tr>
       <td valign="bottom" style="text-align:center; font-family:'Times New Roman',serif; font-size:14pt; line-height:150%;">
         Кривий Ріг<br>
@@ -2054,16 +2054,31 @@ function exportDocx() {
   const elemType = pageNumOnTop ? 'header' : 'footer';
   const elemId = pageNumOnTop ? 'h1' : 'f1';
   const msoCls = pageNumOnTop ? 'MsoHeader' : 'MsoFooter';
-  const pageNumDef = `<div style='mso-element:${elemType}' id='${elemId}'><p class='${msoCls}' align='${pageNumAlign}' style='margin:0; text-align:${pageNumAlign}; font-family:"Times New Roman",serif; font-size:14pt;'><!--[if supportFields]><span style='mso-element:field-begin'></span> PAGE <span style='mso-element:field-separator'></span><![endif]--><span class='MsoPageNumber'></span><!--[if supportFields]><span style='mso-element:field-end'></span><![endif]--></p></div>`;
+
+  // Page number header/footer definition.
+  // Wrapped in a hidden container so the fallback text never leaks as body text.
+  // Word still processes mso-element definitions inside hidden containers.
+  const pageNumDef = [
+    '<div style="height:0;overflow:hidden">',
+    '<div style="mso-element:' + elemType + '" id="' + elemId + '">',
+    '<p class="' + msoCls + '" align="' + pageNumAlign + '" style="margin:0;text-align:' + pageNumAlign + ';font-family:Times New Roman,serif;font-size:14pt">',
+    '<!--[if supportFields]>',
+    '<span style="mso-element:field-begin"></span>',
+    ' PAGE ',
+    '<span style="mso-element:field-separator"></span>',
+    '<![endif]-->',
+    '<span class="MsoPageNumber"></span>',
+    '<!--[if supportFields]>',
+    '<span style="mso-element:field-end"></span>',
+    '<![endif]-->',
+    '</p></div></div>'
+  ].join('');
   const footer = "\n</body>\n</html>";
 
-  // Inject pageNumDef between Section1 closing and WordSection2 opening.
-  // This way Section1 (title page) has no header/footer at all.
-  processed = processed.replace(
-    /(<\/div>)\s*(<div class="WordSection2">)/,
-    '$1\n' + pageNumDef + '\n$2'
-  );
-  const sourceHTML = header + processed + footer;
+  // Place pageNumDef before all sections.
+  // Section1 @page has NO mso-header/footer ref => no number on title.
+  // Section2 @page references h1/f1 => numbers on content pages.
+  const sourceHTML = header + pageNumDef + '\n' + processed + footer;
 
   // Create blob with proper MIME type for Word
   const blob = new Blob([sourceHTML], {
