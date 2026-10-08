@@ -2042,11 +2042,30 @@ function exportDocx() {
   const elemType = pageNumOnTop ? 'header' : 'footer';
   const elemId = pageNumOnTop ? 'h1' : 'f1';
   const msoCls = pageNumOnTop ? 'MsoHeader' : 'MsoFooter';
-  // Direct mso-element definition as a direct child of <body>.
-  // Word strips these from body rendering and uses them as header/footer.
-  const pageNumDef = `<div style='mso-element:${elemType}' id='${elemId}'><p class='${msoCls}' align='${pageNumAlign}' style='margin:0;text-align:${pageNumAlign};font-family:Times New Roman,serif;font-size:14pt'><!--[if supportFields]><span style='mso-element:field-begin'></span> PAGE <span style='mso-element:field-separator'></span><![endif]--><span class='MsoPageNumber'></span><!--[if supportFields]><span style='mso-element:field-end'></span><![endif]--></p></div>`;
+
+  // Page number definition wrapped in MSO conditional comment:
+  // - Word (MSO>=9) sees and processes the mso-element definition
+  // - Browsers/print-preview DON'T see it at all (no phantom "1")
+  // - Uses mso-field-code instead of nested <!--[if supportFields]--> to avoid
+  //   comment nesting issues
+  const pageNumDef =
+    '<!--[if gte mso 9]>' +
+    '<div style="mso-element:' + elemType + '" id="' + elemId + '">' +
+    '<p class="' + msoCls + '" align="' + pageNumAlign + '" ' +
+    'style="margin:0;text-align:' + pageNumAlign + ';font-family:Times New Roman,serif;font-size:14pt">' +
+    "<span style='mso-field-code:\" PAGE  \\* MERGEFORMAT \"'>2</span>" +
+    '</p></div>' +
+    '<![endif]-->';
+
+  // Inject INSIDE WordSection2 — the ONLY placement that produces page numbers.
+  // The MSO conditional wrapper prevents the phantom "1" from appearing.
+  processed = processed.replace(
+    /(<div\s+class="WordSection2">)/i,
+    '$1\n' + pageNumDef + '\n'
+  );
+
   const footer = "\n</body>\n</html>";
-  const sourceHTML = header + pageNumDef + '\n' + processed + footer;
+  const sourceHTML = header + processed + footer;
 
   // Create blob with proper MIME type for Word
   const blob = new Blob([sourceHTML], {
