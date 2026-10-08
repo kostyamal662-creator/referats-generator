@@ -367,7 +367,7 @@ async function getVerifiedSources(topic) {
       const subWorks = await searchCatalogue(subQ);
       addVerifiedCatalogueWorks(
         verified, usedTitles, subWorks,
-        work => partialTopicMatchCount(work, stems) >= 1
+        work => partialTopicMatchCount(work, stems) >= (stems.length > 2 ? 2 : 1)
       );
     }
   }
@@ -379,7 +379,7 @@ async function getVerifiedSources(topic) {
       .sort((a, b) => partialTopicMatchCount(b, stems) - partialTopicMatchCount(a, stems));
     addVerifiedCatalogueWorks(
       verified, usedTitles, partiallyRelevantWorks,
-      work => partialTopicMatchCount(work, stems) >= 1
+      work => partialTopicMatchCount(work, stems) >= (stems.length > 2 ? 2 : 1)
     );
   }
 
